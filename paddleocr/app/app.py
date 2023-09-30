@@ -253,10 +253,12 @@ def detection(data: Image_Model):
             res.append({
                 "id":x,
                 "image_name":image_name,
+                "score":0,
                 "xmin":xmin, 
                 "ymin":ymin,
                 "xmax":xmax,
                 "ymax":ymax,
+                "classname":"numberplate",
                 "np":inter_res,                
             })
     else:
@@ -277,11 +279,13 @@ def detection(data: Image_Model):
             res.append({
                 "id":x,
                 "image_name":image_name,
+                "score":0,
                 "xmin":xmin, 
                 "ymin":ymin,
                 "xmax":xmax,
                 "ymax":ymax,
-                "np":inter_res,                
+                "classname":"numberplate",
+                "np":inter_res             
             })
         # res = im.infer(image, data.model_config)
     print("======inference done**********")
