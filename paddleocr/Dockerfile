@@ -17,13 +17,20 @@ RUN pip install seaborn
 RUN pip install scipy
 Run pip install glob2
 Run pip install paramiko
-Run pip install fastapi
+Run pip install fastapi==0.99.1
 Run pip install "uvicorn[standard]"
 Run pip install torch
 Run pip install torchvision
 Run pip install protobuf==3.20.*
 Run pip install ipython
 Run pip install psutil
+Run pip install minio
+Run pip install paddlepaddle==2.4.2
+Run pip install shapely
+Run pip install scikit-image
+Run pip install pyclipper
+Run pip install lmdb
+Run pip install imgaug
 copy app /app
 WORKDIR /app
 RUN mkdir /app/logs
