@@ -16,7 +16,7 @@ minio:
   access_key: R8mQTw7uevt178G216KM
   secure: False
 # minio:
-#   endpoint: 172.16.0.170:9000
-#   secret_key: JEJG4oNT3rpTe80VlFXWcxkE8fWUVJfxP1XHdmNd
-#   access_key: XHXPHOuchiuxkQpYUYIM
+#   endpoint: 172.16.0.178:9000
+#   secret_key: ktIanRWzFYLkxuKV52uHn8t2K9xhsczfS74RUKUX
+#   access_key: 6uYsllVhmjkWALUCR5uD
 #   secure: False

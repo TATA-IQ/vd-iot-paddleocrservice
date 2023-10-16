@@ -1,7 +1,7 @@
-host = "172.16.0.171"
-port = 22
-username = "aditya.singh"
-password = "Welcome#123"
+# host = "172.16.0.171"
+# port = 22
+# username = "aditya.singh"
+# password = "Welcome#123"
 import paramiko
 from paramiko.transport import SecurityOptions, Transport
 
@@ -87,16 +87,16 @@ class SFTPClient:
         destpath = destpath
         self.download(srcpath, destpath)
 
-    def downloadyolov8(self, srcpath, destpath):
-        '''
-        Download Yolov8 model
-        Args:
-            srcpath: source path of model
-            destpath: local path of model
-        '''
-        srcpath = self.root_path + "/yolov8/" + filenm
-        destpath = destpath + filenm
-        self.download(srcpath, destpath)
+    # def downloadyolov8(self, srcpath, destpath):
+    #     '''
+    #     Download Yolov8 model
+    #     Args:
+    #         srcpath: source path of model
+    #         destpath: local path of model
+    #     '''
+    #     srcpath = self.root_path + "/yolov8/" + filenm
+    #     destpath = destpath + filenm
+    #     self.download(srcpath, destpath)
     
     
 

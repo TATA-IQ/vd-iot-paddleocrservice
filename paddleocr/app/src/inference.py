@@ -1,12 +1,14 @@
+""" inference """
 import os
-import glob
-import copy
-import time
-import re
+import sys
+# import glob
+# import copy
+# import time
+# import re
 
-import cv2
-import numpy as np
-# import torch
+# import cv2
+# import numpy as np
+import torch
 
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
 from paddleocr import PaddleOCR
@@ -28,8 +30,8 @@ class InferenceModel:
         else:
             self.device = "cpu"
         self.model_path = model_path #+ "/" + os.listdir(self.model_path)[0]
-        self.det_model_path = model_path + "/" + os.listdir(model_path)[0] 
-        self.rec_model_path = model_path + "/" + os.listdir(model_path)[1] 
+        self.det_model_path = model_path + "/" + os.listdir(model_path)[0]
+        self.rec_model_path = model_path + "/" + os.listdir(model_path)[1]
         print("*"*100)
         print(self.det_model_path)
         print("*"*100)
@@ -106,10 +108,11 @@ class InferenceModel:
             list: list of dictionary. It will have all the detection result.
         """
         image_height, image_width, _ = image.shape
-        print("image shape====",image.shape)
-        raw_image = copy.deepcopy(image)
-        img0 = copy.deepcopy(image)
-        img = copy.deepcopy(image)
+        print("image shape====",(image_height, image_width, _))
+        print(model_config)
+        # raw_image = copy.deepcopy(image)
+        # img0 = copy.deepcopy(image)
+        # img = copy.deepcopy(image)
 
         result = self.model.ocr(image, cls=False)
         print("result", result)
@@ -127,7 +130,7 @@ class InferenceModel:
                 # if len(np_pred) > 10:
                 #     np_pred = np_pred.replace('I','')
                 # if len(np_pred) > 10:
-                #     np_pred = np_pred[1:]            
+                #     np_pred = np_pred[1:]
         else:
-            np_pred = '' 
+            np_pred = ''
         return np_pred
