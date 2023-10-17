@@ -105,7 +105,7 @@ class InferenceModel:
             image (array): image in numpy array
             model_config (dict): configuration specific to camera group for detection
         Returns:
-            list: list of dictionary. It will have all the detection result.
+            results (list): list of dictionary. It will have all the detection result.
         """
         image_height, image_width, _ = image.shape
         print("image shape====",(image_height, image_width, _))
