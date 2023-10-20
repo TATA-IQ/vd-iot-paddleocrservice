@@ -34,5 +34,4 @@ RUN pip install imgaug
 copy app /app
 WORKDIR /app
 RUN mkdir /app/logs
-RUN mkdir /app/model
 cmd ["python3","app.py"]
