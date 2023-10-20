@@ -15,22 +15,24 @@ RUN pip install PyYAML
 RUN pip install tqdm
 RUN pip install seaborn
 RUN pip install scipy
-Run pip install glob2
-Run pip install paramiko
-Run pip install fastapi
-Run pip install "uvicorn[standard]"
-Run pip install torch
-Run pip install torchvision
-Run pip install protobuf==3.20.*
-Run pip install ipython
-Run pip install psutil
+RUN pip install glob2
+RUN pip install paramiko
+RUN pip install fastapi==0.99.1
+RUN pip install "uvicorn[standard]"
+RUN pip install torch
+RUN pip install torchvision
+RUN pip install protobuf==3.20.*
+RUN pip install ipython
+RUN pip install psutil
+RUN pip install minio
+RUN pip install paddlepaddle==2.4.2
+RUN pip install shapely
+RUN pip install scikit-image
+RUN pip install pyclipper
+RUN pip install lmdb
+RUN pip install imgaug
 copy app /app
 WORKDIR /app
 RUN mkdir /app/logs
 RUN mkdir /app/model
-RUN mkdir /app/model/tensorflow
-RUN mkdir /app/model/pytorch
-RUN mkdir /app/model/yolov5
-RUN mkdir /app/model/yolov8
-RUN mkdir /app/model/temp
 cmd ["python3","app.py"]
