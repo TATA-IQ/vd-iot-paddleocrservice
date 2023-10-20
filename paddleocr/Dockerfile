@@ -35,9 +35,4 @@ copy app /app
 WORKDIR /app
 RUN mkdir /app/logs
 RUN mkdir /app/model
-RUN mkdir /app/model/tensorflow
-RUN mkdir /app/model/pytorch
-RUN mkdir /app/model/yolov5
-RUN mkdir /app/model/yolov8
-RUN mkdir /app/model/temp
 cmd ["python3","app.py"]
