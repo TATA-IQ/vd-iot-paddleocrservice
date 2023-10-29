@@ -17,12 +17,3 @@ minio:
   access_key: 6uYsllVhmjkWALUCR5uD
   secure: False
 # minio:
-#   endpoint: 172.16.0.170:9000
-#   secret_key: yMHbGFngNM5OnuWFj5lUDBJozEjryGAPBeF34WuG
-#   access_key: R8mQTw7uevt178G216KM
-#   secure: False
-# minio:
-#   endpoint: 172.16.0.170:9000
-#   secret_key: JEJG4oNT3rpTe80VlFXWcxkE8fWUVJfxP1XHdmNd
-#   access_key: XHXPHOuchiuxkQpYUYIM
-#   secure: False

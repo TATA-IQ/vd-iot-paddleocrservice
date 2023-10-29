@@ -1,13 +1,14 @@
-from minio import Minio
-from minio.error import S3Error
+"""model download"""
 import urllib3
-import cv2
+# import cv2
 from zipfile import ZipFile
 import os
-import numpy as np
-from datetime import datetime
+# import numpy as np
+# from datetime import datetime
 import shutil
 
+from minio import Minio
+from minio.error import S3Error
 
 class DownloadModel:
     """
@@ -44,7 +45,7 @@ class DownloadModel:
             print(e)
             print(f"{object_name} {e.message} ")
 
-    def save_model_files(self, object_path, local_path):
+    def save_model_files(self, object_name, local_path):
         """
         Args:
             object_name (str): full path of file from miniodb
@@ -68,7 +69,7 @@ class DownloadModel:
             unzippath (str): path to unzip the downloaded model
             modelname (str): name of the model
         """
-        print("Zip path===>", path)
+        print("Zip path===>", path,modelname)
         with ZipFile(path, "r") as zObject:
             zObject.extractall(path=unzippath)
         os.remove(path)
@@ -94,6 +95,3 @@ class DownloadModel:
                 os.mkdir(foldername)
         else:
             os.mkdir(foldername)
-        
-
-

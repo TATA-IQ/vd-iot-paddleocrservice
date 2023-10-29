@@ -1,26 +1,27 @@
-import cv2
-import subprocess
-import requests
-import time
-from urllib.parse import urlparse
+""" paddle ocr app"""
+# import cv2
+# import subprocess
 import os
 import socket
+from zipfile import ZipFile
+from io import BytesIO
+from urllib.parse import urlparse
+import requests
+# import time
 
 from PIL import Image
-from io import BytesIO
-import io
+# import io
 import torch
-import base64
+# import base64
 
 
 from fastapi import FastAPI
 import uvicorn
 import numpy as np
 
-from src.inference import InferenceModel
 from sftpdownload.download import SFTPClient
+from src.inference import InferenceModel
 from src.configParser import Config
-from zipfile import ZipFile
 from querymodel.imageModel import Image_Model
 from utils_download.model_download import DownloadModel
 
@@ -70,14 +71,12 @@ class SetupModel():
     print("found====>", responseModel.json())
     '''
     def getModelMasterCofig(self):
-        
         '''
         Get the Master Configuration of model
         '''
         modelmaster = requests.get(
             self.apis["model_master_config"], json={"model_id": self.modelconf["model_id"]}
         ).json()
-        
         print("======Model Master Response======")
         print(modelmaster)
         return modelmaster['data']
@@ -102,10 +101,7 @@ class SetupModel():
         model_nm = model_path.split(".")[0]
         with ZipFile("model/test.zip", "r") as zObject:
             zObject.extractall(path="model/temp")
-
-    
-
-
+            print(model_nm)
     def downloadMinio(self,modelmaster):
         '''
         Args:
@@ -134,7 +130,6 @@ class SetupModel():
             + str(self.modelconf["port"])
             + "/detect"
         )
-        
         model_id = self.modelconf["model_id"]
         print("updating for model id===>", model_id)
 
@@ -151,6 +146,7 @@ class SetupModel():
         '''
         This function call the model configuration api
         '''
+        model_id = self.modelconf["model_id"]
         model_config = requests.get(self.apis["model_config"], json={"model_id": model_id})
         return model_config
 
@@ -169,33 +165,28 @@ class SetupModel():
         if torch.cuda.is_available():
             gpu = True
         model_list = os.listdir("model/")
-        print("*"*100)
         print("model/" + model_list[0])
         im = InferenceModel(model_path="model/" + model_list[0], gpu=gpu)
         im.loadmodel()
         print("====Model Loaded====")
-        print("Running api on GPU {}".format(gpu))
+        print(f"Running api on GPU {gpu}")
         self.createIP()
-
         return im,self.modelconf,model_name, framework
 
 
-st=SetupModel()    
+st=SetupModel()
 im,modelconf,model_name, framework=st.startModel()
-
 app = FastAPI()
-
 def strToImage(imagestr):
     # print("*"*100)
     stream = BytesIO(imagestr.encode("ISO-8859-1"))
     image = Image.open(stream).convert("RGB")
-    open_cv_image = np.array(image) 
+    open_cv_image = np.array(image)
     # decodedimage = base64.b64decode(str(imagestr))
     # img = Image.open(io.BytesIO(imgdata))
     # image= cv2.cvtColor(np.array(img), cv2.COLOR_BGR2RGB)
-
     # jpg_as_np = np.frombuffer(image_1, dtype=np.uint8)
-    # image = cv2.imdecode(jpg_as_np, flags=1) 
+    # image = cv2.imdecode(jpg_as_np, flags=1)
     # stream = BytesIO(imagestr.encode("ISO-8859-1"))
     # decodedimage = Image.open(stream).convert("RGBA")
     # decodedimage = np.array(decodedimage)
@@ -234,19 +225,18 @@ def detection(data: Image_Model):
     image_name = data.image_name
     np_coordinates_dict  = data.np_coord
     print("*"*100)
-    print(np_coordinates_dict)
+    print(f"model config is {data.model_config}")
+    print(f"image_name is {image_name}, np_coordinates_dict are : {np_coordinates_dict}")
 
     if data.model_config is None:
         print("===model config is None===")
         res = []
-        for x,y in np_coordinates_dict.items():            
+        for x,y in np_coordinates_dict.items():
             xmin = y[0]
             ymin = y[1]
             xmax = y[2]
             ymax = y[3]
-
             image1 = image[y[1]:y[3],y[0]:y[2]]
-
             inter_res = im.infer(image1)
             print(inter_res)
             # np_coords = [xmin,ymin,xmax,ymax]
@@ -264,29 +254,30 @@ def detection(data: Image_Model):
     else:
         print("===model config is not None===")
         res = []
-        for x,y in np_coordinates_dict.items():
+        if np_coordinates_dict is not None:
+            for x,y in np_coordinates_dict.items():
 
-            xmin = y[0]
-            ymin = y[1]
-            xmax = y[2]
-            ymax = y[3]
+                xmin = y[0]
+                ymin = y[1]
+                xmax = y[2]
+                ymax = y[3]
 
-            image1 = image[y[1]:y[3],y[0]:y[2]]
+                image1 = image[y[1]:y[3],y[0]:y[2]]
 
-            inter_res = im.infer(image1)
-            print(inter_res)
-            # np_coords = [xmin,ymin,xmax,ymax]
-            res.append({
-                "id":x,
-                "image_name":image_name,
-                "score":0,
-                "xmin":xmin, 
-                "ymin":ymin,
-                "xmax":xmax,
-                "ymax":ymax,
-                "classname":"numberplate",
-                "np":inter_res             
-            })
+                inter_res = im.infer(image1)
+                print(inter_res)
+                # np_coords = [xmin,ymin,xmax,ymax]
+                res.append({
+                    "id":x,
+                    "image_name":image_name,
+                    "score":0,
+                    "xmin":xmin, 
+                    "ymin":ymin,
+                    "xmax":xmax,
+                    "ymax":ymax,
+                    "classname":"numberplate",
+                    "np":inter_res             
+                })
         # res = im.infer(image, data.model_config)
     print("======inference done**********")
     print(res)
@@ -301,7 +292,6 @@ def detection():
     '''
     res = im.getClasses()
     return {"data": res}
-
     
 if __name__ == "__main__":
     print("=====inside main************")
