@@ -11,9 +11,9 @@ apis:
   model_master_config: "http://10.0.153.141:8000/getModelMasterbyId"
   model_config: "http://10.0.153.141:8000/getModelConfigbyId"
 minio:
-  endpoint: 172.31.26.109:9000
-  secret_key: yMHbGFngNM5OnuWFj5lUDBJozEjryGAPBeF34WuG
-  access_key: R8mQTw7uevt178G216KM
+  endpoint: http://10.0.153.141:9000
+  secret_key: fz7x9AcpZqB7YY0VxgiQAYtC4RZVPSaumQycHPrP
+  access_key: BIVeLI5sayqshgRWSm5H
   secure: False
 # minio:
 #   endpoint: 172.16.0.178:9000
