@@ -12,12 +12,14 @@ import torch
 
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
 from paddleocr import PaddleOCR
+from console_logging.console import Console
+console=Console()
 
 class InferenceModel:
     """
     PaddleOCR inference
     """
-    def __init__(self, model_path=None, gpu=False):
+    def __init__(self, model_path=None, gpu=False, logger=None):
         """
         Initialize PaddleOCR inference
         
@@ -29,12 +31,12 @@ class InferenceModel:
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         else:
             self.device = "cpu"
+        self.log = logger
         self.model_path = model_path #+ "/" + os.listdir(self.model_path)[0]
         self.det_model_path = model_path + "/" + os.listdir(model_path)[0]
         self.rec_model_path = model_path + "/" + os.listdir(model_path)[1]
-        print("*"*100)
-        print(self.det_model_path)
-        print("*"*100)
+        console.info(f" detection model path {self.det_model_path}")
+        self.log.info(f" detection model path {self.det_model_path}")
         self.ocr = None
         self.model = None
         self.augment = None
@@ -83,6 +85,8 @@ class InferenceModel:
         #     self.model = YOLO(self.model_path)
         else:
             print("MODEL NOT FOUND")
+            self.log.error("MODEL NOT FOUND")
+            console.error("MODEL NOT FOUND")
             sys.exit()
         # self.stride = int(self.model.stride.max())
         # self.names = (
@@ -108,18 +112,20 @@ class InferenceModel:
             results (list): list of dictionary. It will have all the detection result.
         """
         image_height, image_width, _ = image.shape
-        print("image shape====",(image_height, image_width, _))
-        print(model_config)
+        self.log.info(f"image shape===={image.shape}")
+        console.info(f"image shape===={image.shape}")
         # raw_image = copy.deepcopy(image)
         # img0 = copy.deepcopy(image)
         # img = copy.deepcopy(image)
 
         result = self.model.ocr(image, cls=False)
-        print("result", result)
+        self.log.info(f"result {result}")
+        console.info(f"result {result}")
         if len(result[0]):
             for idx in range(len(result)):
                 res = result[idx]
-                print("res",res)
+                self.log.info(f"res===  {res}")
+                console.info(f"res===  {res}")
                 txts = [line[1][0] for line in res if len(line[1][0]) > 2]
                 np_pred = "".join(txts)
                 # np_pred = re.sub(r'[^\w]', '',np_pred)

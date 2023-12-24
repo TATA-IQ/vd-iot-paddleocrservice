@@ -7,7 +7,8 @@ from zipfile import ZipFile
 from io import BytesIO
 from urllib.parse import urlparse
 import requests
-# import time
+import time
+import consul
 
 from PIL import Image
 # import io
@@ -19,24 +20,149 @@ from fastapi import FastAPI
 import uvicorn
 import numpy as np
 
+from sourcelogs.logger import create_rotating_log
 from sftpdownload.download import SFTPClient
 from src.inference import InferenceModel
 from src.configParser import Config
 from querymodel.imageModel import Image_Model
 from utils_download.model_download import DownloadModel
+from console_logging.console import Console
+console=Console()
+os.makedirs("logs", exist_ok=True)
+log = create_rotating_log("logs/logs.log")
+
+def get_local_ip():
+        '''
+        Get the ip of server
+        '''
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            # doesn't even have to be reachable
+            s.connect(("192.255.255.255", 1))
+            IP = s.getsockname()[0]
+        except:
+            IP = "127.0.0.1"
+        finally:
+            s.close()
+        return IP
+
+def register_service(consul_conf,port):
+    name=socket.gethostname()
+    # local_ip=socket.gethostbyname(socket.gethostname())
+    local_ip=get_local_ip()
+    consul_client = consul.Consul(host=consul_conf["host"],port=int(consul_conf["port"]))
+    consul_client.agent.service.register(
+    "yolov8validate",service_id=name+"-yolov8-"+consul_conf["env"],
+    port=int(port),
+    address=local_ip,
+    tags=["python","yolov8",consul_conf["env"]]
+)
+
+def get_service_address(consul_client,service_name,env):
+    while True:
+        
+        try:
+            print("===service_name===", service_name)
+            services=consul_client.catalog.service(service_name)[1]
+            print(services)
+            for i in services:
+                if env == i["ServiceID"].split("-")[-1]:
+                    return i
+        except Exception as ex:
+            print(ex)
+            time.sleep(10)
+            continue
+
+
+
+
+def get_confdata(consul_conf):
+    consul_client = consul.Consul(host=consul_conf["host"],port=consul_conf["port"])
+    pipelineconf=get_service_address(consul_client,"pipelineconfig",consul_conf["env"])
+
+    
+    
+    env=consul_conf["env"]
+    
+    endpoint_addr="http://"+pipelineconf["ServiceAddress"]+":"+str(pipelineconf["ServicePort"])
+    print("endpoint addr====",endpoint_addr)
+    while True:
+        
+        try:
+            res=requests.get(endpoint_addr+"/")
+            endpoints=res.json()
+            log.info(f"===got endpoints==={endpoints}")
+            console.info(f"===got endpoints==={endpoints}")
+            break
+        except Exception as ex:
+            log.error(f"endpoint exception==>{ex}")
+            console.error(f"endpoint exception==>{ex}")
+            time.sleep(10)
+            continue
+    
+    while True:
+        try:
+            res=requests.get(endpoint_addr+endpoints["endpoint"]["model"])
+            modelconf=res.json()
+            log.info(f"modelconf===>{modelconf}")
+            console.info(f"modelconf===>{modelconf}")
+            break
+            
+
+        except Exception as ex:
+            log.error(f"modelconf exception==>{ex}")
+            console.error(f"modelconf exception==>{ex}")
+            time.sleep(10)
+            continue
+    console.info("=======searching for dbapi====")
+    while True:
+        try:
+            log.info("=====consul search====")
+            console.info("=====consul search====")
+            dbconf=get_service_address(consul_client,"dbapi",consul_conf["env"])
+            # print("****",dbconf)
+            dbhost=dbconf["ServiceAddress"]
+            dbport=dbconf["ServicePort"]
+            res=requests.get(endpoint_addr+endpoints["endpoint"]["dbapi"])
+            dbres=res.json()
+            console.info(f"===got db conf==={ dbres}")
+            break
+        except Exception as ex:
+            log.error("db discovery exception==={0}".format(ex))
+            console.error("db discovery exception==={0}".format(ex))
+            time.sleep(10)
+            continue
+    for i in dbres["apis"]:
+        print("====>",i)
+        dbres["apis"][i]="http://"+dbhost+":"+str(dbport)+dbres["apis"][i]
+
+    
+    console.info("======dbres======")
+    log.info(dbres)
+    log.info(modelconf)
+    console.info(dbres)
+    console.info(modelconf)
+    return  dbres,modelconf
 
 class SetupModel():
     '''
     Class to Setup the Inference Model
     '''
 
-    def __init__(self,config_path="config/config.yaml",model_config_path="config/model.yaml"):
-        conf = Config.yamlconfig(config_path)[0]
-        modelconf=Config.yamlModel(model_config_path)[0]
-        self.apis = conf["apis"]
+    def __init__(self,config_path="config/config.yaml",model_config_path="config/model.yaml",logger = log):       
+        config = Config.yamlconfig(config_path)
+        dbapi,minio_conf=get_confdata(config[0]["consul"])
+        self.modelconf=Config.yamlModel(model_config_path)[0]
+        self.apis = dbapi["apis"]
         # self.sftp = conf["sftp"]
-        self.minio=conf["minio"]
-        self.modelconf=modelconf
+        self.minio=minio_conf["minio"]
+        self.log = logger
+        # conf = Config.yamlconfig(config_path)[0]
+        # modelconf=Config.yamlModel(model_config_path)[0]
+        # self.apis = conf["apis"]
+        # # self.sftp = conf["sftp"]
+        # self.minio=conf["minio"]
+        # self.modelconf=modelconf
 
 
     def get_local_ip(self):
@@ -77,8 +203,8 @@ class SetupModel():
         modelmaster = requests.get(
             self.apis["model_master_config"], json={"model_id": self.modelconf["model_id"]}
         ).json()
-        print("======Model Master Response======")
-        print(modelmaster)
+        console.info(f"======Model Master Response======{modelmaster}")
+        self.log.info(f"======Model Master Response======{modelmaster}")
         return modelmaster['data']
         # model_path = responseModel.json()["data"][0]["model_path"]
         # time.sleep(10)
@@ -108,7 +234,7 @@ class SetupModel():
             modelmaster (dict): configuration to connect with minio
         '''
         local_path="model"
-        yolodownload = DownloadModel(modelmaster["model_framework"], self.minio)
+        yolodownload = DownloadModel(modelmaster["model_framework"], self.minio, logger = self.log)
         yolodownload.createLocalFolder(local_path)
         yolodownload.save_data(modelmaster["model_path"], local_path)
         # downloadData(data.model_path,local_path)
@@ -166,10 +292,11 @@ class SetupModel():
             gpu = True
         model_list = os.listdir("model/")
         print("model/" + model_list[0])
-        im = InferenceModel(model_path="model/" + model_list[0], gpu=gpu)
+        im = InferenceModel(model_path="model/" + model_list[0], gpu=gpu, logger = self.log)
         im.loadmodel()
-        print("====Model Loaded====")
-        print(f"Running api on GPU {gpu}")
+        console.info("====Model Loaded====")
+        console.info("Running api on GPU {}".format(gpu))
+        self.log.info("Running api on GPU {}".format(gpu))
         self.createIP()
         return im,self.modelconf,model_name, framework
 
@@ -182,18 +309,6 @@ def strToImage(imagestr):
     stream = BytesIO(imagestr.encode("ISO-8859-1"))
     image = Image.open(stream).convert("RGB")
     open_cv_image = np.array(image)
-    # decodedimage = base64.b64decode(str(imagestr))
-    # img = Image.open(io.BytesIO(imgdata))
-    # image= cv2.cvtColor(np.array(img), cv2.COLOR_BGR2RGB)
-    # jpg_as_np = np.frombuffer(image_1, dtype=np.uint8)
-    # image = cv2.imdecode(jpg_as_np, flags=1)
-    # stream = BytesIO(imagestr.encode("ISO-8859-1"))
-    # decodedimage = Image.open(stream).convert("RGBA")
-    # decodedimage = np.array(decodedimage)
-    # # imagencode = imagestr.encode()
-    # # decodedimage = base64.b64decode(imagencode)
-    # nparr = np.frombuffer(decodedimage, np.uint8)
-    # img_np = cv2.imdecode(nparr, flags=1)
     return open_cv_image
 
 # def strToImage(imagestr):
@@ -224,12 +339,14 @@ def detection(data: Image_Model):
     image = strToImage(data.image)
     image_name = data.image_name
     np_coordinates_dict  = data.np_coord
-    print("*"*100)
-    print(f"model config is {data.model_config}")
-    print(f"image_name is {image_name}, np_coordinates_dict are : {np_coordinates_dict}")
+    log.info(f"model config is {data.model_config}")
+    console.info(f"model config is {data.model_config}")
+    log.info(f"image_name is {image_name}, np_coordinates_dict are : {np_coordinates_dict}")
+    console.info(f"image_name is {image_name}, np_coordinates_dict are : {np_coordinates_dict}")
 
     if data.model_config is None:
-        print("===model config is None===")
+        log.info("===model config is None===")
+        console.info("===model config is None===")
         res = []
         for x,y in np_coordinates_dict.items():
             xmin = y[0]
@@ -252,7 +369,8 @@ def detection(data: Image_Model):
                 "np":inter_res,                
             })
     else:
-        print("===model config is not None===")
+        log.info("===model config is not None===")
+        console.info("===model config is not None===")
         res = []
         if np_coordinates_dict is not None:
             for x,y in np_coordinates_dict.items():
@@ -279,9 +397,11 @@ def detection(data: Image_Model):
                     "np":inter_res             
                 })
         # res = im.infer(image, data.model_config)
-    print("======inference done**********")
-    print(res)
-    print(type(res))
+    console.info("======inference done**********")
+    log.info("======inference done**********")
+    log.info(res)
+    console.info(res)
+    log.info(type(res))
     return {"data": res}
 
 
@@ -294,7 +414,8 @@ def detection():
     return {"data": res}
     
 if __name__ == "__main__":
-    print("=====inside main************")
+    console.info("=====inside main************")
+    log.info("=====inside main************")
     uvicorn.run(app, host="0.0.0.0", port=int(modelconf["port"]))
 
 

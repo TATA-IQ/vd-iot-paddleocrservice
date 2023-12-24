@@ -31,6 +31,8 @@ RUN pip install scikit-image
 RUN pip install pyclipper
 RUN pip install lmdb
 RUN pip install imgaug
+RUN pip install python-consul
+Run pip install console-logging
 copy app /app
 WORKDIR /app
 RUN mkdir /app/logs
